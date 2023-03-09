@@ -133,3 +133,227 @@ print(b.grad.data)
 True
 tensor(1942.5000)'''
 =========================
+
+3.	Implement AND function in Perceptron with Bipolar inputs and targets.
+
+
+import numpy as np
+import torch
+
+def activation(out,threshold):
+    if out>threshold:
+        return 1
+    else:
+        return -1
+
+def perceptron(and_input):
+    a=[-1,-1,1,1]
+    b=[-1,1,-1,1]
+    y=[-1,-1,-1,1]
+    w=[0.1,0.1]
+    bias=0.4
+    threshold=1
+    learning_rate = 0.5
+    i=0
+    print("Perceptron Training:")
+    if(y!=i):
+        summation= bias+a[i]*w[0]+b[i]*w[1]
+        o=activation(summation,threshold)
+        print("Input:"+str(a[i])+","+str(b[i]))
+        print("Weights:"+str(w[0])+","+str(w[1]))
+        print("Bias:"+ str(bias))
+        print("summation:"+str(summation)+"\n"+"threshold"+" "+str(threshold))
+        print("Actual Output:"+str(y[i])+"Predicted Output"+str(o))
+        if(o!=y):
+            #w=w+leaening_rate(actual_output - predicted_output)*input
+            #bias = bias(actual_output-predicted)*t
+            print("__________\n Updating Weights and Bias")
+            w[0]=w[0]+learning_rate*(y[i]-0)*a[i]
+            w[1]=w[1]+learning_rate*(y[i]-0)*b[i]
+            bias = bias+learning_rate*(y[i]-0)*bias
+            print("Updated Weights:"+str(w[0])+","+str(w[1]))
+            print("Updated Bias")
+            print(bias)
+            #i=-1
+            #print("\n Weights Updates Training Again:")
+        i=i+1
+    summation=and_input[0]*w[0]+and_input[1]*w[1]+bias
+
+
+and_input=[-1,1]
+print("AND GATE OUTPUT FOR"+str(and_input)+":"+str(perceptron(and_input)))
+
+
+'''output
+Perceptron Training:
+Input:-1,-1
+Weights:0.1,0.1
+Bias:0.4
+summation:0.20000000000000004
+threshold 1
+Actual Output:-1Predicted Output-1
+__________
+ Updating Weights and Bias
+Updated Weights:0.6,0.6
+Updated Bias
+0.2
+AND GATE OUTPUT FOR[-1, 1]:None '''
+
+=========================
+
+
+4.	Implement Perceptron for numeric datasets
+i)	EDA of the dataset should be displayed
+ii)	Missing values should be handled
+iii)	Plot the testing accuracy vs training accuracy
+
+
+
+import torch
+
+
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
+
+X, Y = datasets.load_iris(return_X_y=True)
+
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, train_size=0.8, stratify=Y, random_state=123)
+
+X_train, X_test, Y_train, Y_test = torch.tensor(X_train, dtype=torch.float32),torch.tensor(X_test, dtype=torch.float32),torch.tensor(Y_train, dtype=torch.long),torch.tensor(Y_test, dtype=torch.long)
+
+samples, features = X_train.shape
+classes = Y_test.unique()
+print(features)
+print(X_train.shape, X_test.shape, Y_train.shape, Y_test.shape)
+
+
+''' output:
+4
+torch.Size([120, 4]) torch.Size([30, 4]) torch.Size([120]) torch.Size([30])'''
+
+mean = X_train.mean(axis=0)
+std = X_train.std(axis=0)
+
+X_train = (X_train - mean)/ std
+X_test = (X_test - mean)/ std
+
+from torch import nn
+
+class PercepClassifier(nn.Module):
+    def __init__(self):
+        super(PercepClassifier, self).__init__()
+        self.first_layer = nn.Linear(features, 5)
+        self.second_layer = nn.Linear(5, 10)
+        self.third_layer = nn.Linear(10, 15)
+        self.fourth_layer = nn.Linear(15, 20)
+        self.final_layer = nn.Linear(20,3)
+        self.relu = nn.ReLU()
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, X_batch):
+        layer_out = self.relu(self.first_layer(X_batch))
+        layer_out = self.relu(self.second_layer(layer_out))
+        layer_out = self.relu(self.third_layer(layer_out))
+        layer_out = self.relu(self.fourth_layer(layer_out))
+
+        return self.softmax(self.final_layer(layer_out))
+
+classifier = PercepClassifier()
+preds = classifier(X_train[:5])
+preds
+
+''' output
+tensor([[0.2656, 0.3754, 0.3590],
+        [0.2644, 0.3744, 0.3612],
+        [0.2603, 0.3772, 0.3626],
+        [0.2673, 0.3761, 0.3566],
+        [0.2664, 0.3754, 0.3582]], grad_fn=<SoftmaxBackward0>)'''
+
+def TrainModel(model, loss_func, optimizer, X, Y, epochs=500):
+    for i in range(epochs):
+        preds = model(X)
+        loss = loss_func(preds, Y)
+        optimizer.zero_grad() 
+        optimizer.step() 
+        if i % 100 == 0: 
+            print("NegLogLoss : {:.2f}".format(loss))
+
+from torch.optim import Adamax
+torch.manual_seed(42)
+epochs = 1500
+learning_rate = torch.tensor(1/1e2) # 0.01
+
+classifier = PercepClassifier()
+nll_loss = nn.NLLLoss()
+optimizer = Adamax(params=classifier.parameters(), lr=learning_rate)
+
+TrainModel(classifier, nll_loss, optimizer, X_train, Y_train, epochs=epochs)
+
+
+'''output
+4
+torch.Size([120, 4]) torch.Size([30, 4]) torch.Size([120]) torch.Size([30])
+tensor([[0.2656, 0.3754, 0.3590],
+        [0.2644, 0.3744, 0.3612],
+        [0.2603, 0.3772, 0.3626],
+        [0.2673, 0.3761, 0.3566],
+        [0.2664, 0.3754, 0.3582]], grad_fn=<SoftmaxBackward0>)
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33
+NegLogLoss : -0.33 '''
+
+test_preds = classifier(X_test) 
+
+test_preds = torch.argmax(test_preds, axis=1) 
+
+train_preds = classifier(X_train)
+
+train_preds = torch.argmax(train_preds, axis=1) 
+
+test_preds[:5], train_preds[:5]
+
+'''output
+(tensor([2, 2, 2, 2, 2]), tensor([2, 2, 2, 2, 2]))'''
+
+from sklearn.metrics import accuracy_score
+
+print("Train Accuracy : {:.2f}".format(accuracy_score(Y_train, train_preds)))
+print("Test  Accuracy : {:.2f}".format(accuracy_score(Y_test, test_preds)))
+
+''' output
+Train Accuracy : 0.33
+Test  Accuracy : 0.33'''
+
+from sklearn.metrics import classification_report
+
+print("Test Data Classification Report : ")
+print(classification_report(Y_test, test_preds))
+
+'''output
+Test Data Classification Report : 
+              precision    recall  f1-score   support
+
+           0       0.00      0.00      0.00        10
+           1       0.00      0.00      0.00        10
+           2       0.33      1.00      0.50        10
+
+    accuracy                           0.33        30
+   macro avg       0.11      0.33      0.17        30
+weighted avg       0.11      0.33      0.17        30 '''
+
+
+
+
+
